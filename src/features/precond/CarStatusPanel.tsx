@@ -4,7 +4,12 @@ import { relativeTime } from "../../lib/relativeTime";
 
 const MIN_PRECONDITION_PERCENT = 51;
 
-const CarStatusPanel = ({ status, loading }: CarStatusPanelProps) => {
+const CarStatusPanel = ({
+  status,
+  loading,
+  onRefresh,
+  refreshing,
+}: CarStatusPanelProps) => {
   const battery = status?.batteryPercent ?? null;
   const lowBattery = battery !== null && battery < MIN_PRECONDITION_PERCENT;
 
@@ -91,7 +96,17 @@ const CarStatusPanel = ({ status, loading }: CarStatusPanelProps) => {
         ) : (
           <span />
         )}
-        <span>{updated ? `Updated ${updated}` : ""}</span>
+        <div className="flex items-center gap-3">
+          <span>{updated ? `Updated ${updated}` : ""}</span>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="underline underline-offset-4 disabled:opacity-40"
+          >
+            {refreshing ? "Waking…" : "Refresh"}
+          </button>
+        </div>
       </div>
     </div>
   );

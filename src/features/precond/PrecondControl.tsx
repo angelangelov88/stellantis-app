@@ -3,12 +3,14 @@ import { useLogout } from "../auth/useAuth";
 import CarStatusPanel from "./CarStatusPanel";
 import SchedulePanel from "./SchedulePanel";
 import { usePreconditionControl } from "./usePreconditionControl";
+import { useWake } from "./useWake";
 
 const STATE_LABEL = { on: "On", off: "Off", unknown: "Unknown" } as const;
 const MIN_PRECONDITION_PERCENT = 51;
 
 const PrecondControl = () => {
   const control = usePreconditionControl();
+  const wake = useWake();
   const logout = useLogout();
 
   const wanted = control.target === null ? null : control.target ? "on" : "off";
@@ -42,6 +44,10 @@ const PrecondControl = () => {
       <CarStatusPanel
         status={control.current}
         loading={control.isStatusLoading}
+        onRefresh={() => {
+          wake.mutate();
+        }}
+        refreshing={wake.isPending}
       />
 
       <section className="flex flex-col gap-4">

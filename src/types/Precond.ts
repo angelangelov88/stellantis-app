@@ -5,6 +5,10 @@ type CarStatusPanelProps = {
   status: CarStatus | null;
   // True on the first fetch, before any snapshot has arrived.
   loading: boolean;
+  // Wakes the car and refreshes the snapshot.
+  onRefresh: () => void;
+  // True while a wake/refresh is in flight.
+  refreshing: boolean;
 };
 
 // A single weekly preconditioning schedule in a shape convenient for the UI.
