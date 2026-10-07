@@ -1,0 +1,13 @@
+# Normalize line endings for everyone, regardless of each machine's
+# core.autocrlf. LF in the repo and in the working tree matches Prettier's
+# default and the Linux CI/Vercel build, so there are no spurious diffs.
+* text=auto eol=lf
+
+# Binary assets: never touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
