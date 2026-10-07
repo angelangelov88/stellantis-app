@@ -4,7 +4,7 @@ import { relativeTime } from "../../lib/relativeTime";
 
 const MIN_PRECONDITION_PERCENT = 51;
 
-const CarStatusPanel = ({ status }: CarStatusPanelProps) => {
+const CarStatusPanel = ({ status, loading }: CarStatusPanelProps) => {
   const battery = status?.batteryPercent ?? null;
   const lowBattery = battery !== null && battery < MIN_PRECONDITION_PERCENT;
 
@@ -57,20 +57,29 @@ const CarStatusPanel = ({ status }: CarStatusPanelProps) => {
         {rows.map((row) => (
           <div key={row.label} className="flex items-center justify-between">
             <dt className="text-gray-400">{row.label}</dt>
-            <dd
-              className={classNames("font-semibold", {
-                "text-red-400": row.warn,
-                "text-strong": !row.warn,
-              })}
-            >
-              {row.value}
-            </dd>
+            {loading ? (
+              <dd
+                aria-hidden
+                className="h-4 w-12 animate-pulse rounded bg-gray-700"
+              />
+            ) : (
+              <dd
+                className={classNames("font-semibold", {
+                  "text-red-400": row.warn,
+                  "text-strong": !row.warn,
+                })}
+              >
+                {row.value}
+              </dd>
+            )}
           </div>
         ))}
       </dl>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-        {location ? (
+        {loading ? (
+          <span className="h-3 w-24 animate-pulse rounded bg-gray-700" />
+        ) : location ? (
           <a
             href={`https://www.google.com/maps/search/?api=1&query=${String(location.lat)},${String(location.lon)}`}
             target="_blank"

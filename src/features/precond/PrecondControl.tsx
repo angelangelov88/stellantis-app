@@ -14,7 +14,9 @@ const PrecondControl = () => {
   const currentState = control.current?.precondition ?? "unknown";
   const battery = control.current?.batteryPercent ?? null;
   const lowBattery = battery !== null && battery < MIN_PRECONDITION_PERCENT;
-  const blocked = control.isSending || lowBattery;
+  // Block while sending, on low battery, and during the first status load —
+  // we won't fire a command before we know the car's state and charge.
+  const blocked = control.isSending || lowBattery || control.isStatusLoading;
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col gap-5 px-4 py-6">
@@ -31,7 +33,10 @@ const PrecondControl = () => {
         </button>
       </header>
 
-      <CarStatusPanel status={control.current} />
+      <CarStatusPanel
+        status={control.current}
+        loading={control.isStatusLoading}
+      />
 
       <section className="flex flex-1 flex-col justify-center gap-4">
         <h2 className="text-center text-sm font-medium uppercase tracking-wide text-gray-400">
@@ -40,15 +45,19 @@ const PrecondControl = () => {
 
         <p className="text-center text-sm text-gray-400">
           Car reports:{" "}
-          <span
-            className={classNames("font-semibold", {
-              "text-emerald-400": currentState === "on",
-              "text-strong": currentState === "off",
-              "text-gray-500": currentState === "unknown",
-            })}
-          >
-            {STATE_LABEL[currentState]}
-          </span>
+          {control.isStatusLoading ? (
+            <span className="text-gray-500">checking…</span>
+          ) : (
+            <span
+              className={classNames("font-semibold", {
+                "text-emerald-400": currentState === "on",
+                "text-strong": currentState === "off",
+                "text-gray-500": currentState === "unknown",
+              })}
+            >
+              {STATE_LABEL[currentState]}
+            </span>
+          )}
         </p>
 
         <div className="grid grid-cols-2 gap-3">

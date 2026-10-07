@@ -54,6 +54,8 @@ const usePreconditionControl = () => {
     confirmed,
     timedOut,
     current,
+    // True only on the first status fetch, before any snapshot has arrived.
+    isStatusLoading: status.isLoading,
   };
 };
 
