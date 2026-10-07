@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import type { PreconditionState, PreconditionStatus } from "../../types/Api";
+import type { CarStatus, PreconditionState } from "../../types/Api";
+import { useCarStatus } from "./useCarStatus";
 import { usePrecondition } from "./usePrecondition";
-import { usePreconditionStatus } from "./usePreconditionStatus";
 
 // How long to keep asking the car to confirm a command before giving up. An
 // asleep car can take a while to wake, report, and have psacc refresh its cache.
@@ -20,9 +20,11 @@ const usePreconditionControl = () => {
   // Only poll to confirm once the command was accepted, and until it matches or
   // we time out.
   const confirming = command.isSuccess && !timedOut ? desired : null;
-  const status = usePreconditionStatus(confirming);
+  const status = useCarStatus(confirming);
   const confirmed =
-    desired !== null && command.isSuccess && status.data?.state === desired;
+    desired !== null &&
+    command.isSuccess &&
+    status.data?.precondition === desired;
 
   useEffect(() => {
     if (!command.isSuccess || target === null || confirmed) return;
@@ -40,7 +42,7 @@ const usePreconditionControl = () => {
     command.mutate({ on });
   };
 
-  const current: PreconditionStatus | null = status.data ?? null;
+  const current: CarStatus | null = status.data ?? null;
 
   return {
     send,

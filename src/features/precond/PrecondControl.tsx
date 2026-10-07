@@ -1,18 +1,23 @@
 import classNames from "classnames";
 import { useLogout } from "../auth/useAuth";
+import CarStatusPanel from "./CarStatusPanel";
 import { usePreconditionControl } from "./usePreconditionControl";
 
 const STATE_LABEL = { on: "On", off: "Off", unknown: "Unknown" } as const;
+const MIN_PRECONDITION_PERCENT = 51;
 
 const PrecondControl = () => {
   const control = usePreconditionControl();
   const logout = useLogout();
 
   const wanted = control.target === null ? null : control.target ? "on" : "off";
-  const currentState = control.current?.state ?? "unknown";
+  const currentState = control.current?.precondition ?? "unknown";
+  const battery = control.current?.batteryPercent ?? null;
+  const lowBattery = battery !== null && battery < MIN_PRECONDITION_PERCENT;
+  const blocked = control.isSending || lowBattery;
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col px-4 py-6">
+    <main className="mx-auto flex min-h-dvh max-w-sm flex-col gap-5 px-4 py-6">
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-strong">Mokka Companion</h1>
         <button
@@ -25,6 +30,8 @@ const PrecondControl = () => {
           Log out
         </button>
       </header>
+
+      <CarStatusPanel status={control.current} />
 
       <section className="flex flex-1 flex-col justify-center gap-4">
         <h2 className="text-center text-sm font-medium uppercase tracking-wide text-gray-400">
@@ -47,7 +54,7 @@ const PrecondControl = () => {
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
-            disabled={control.isSending}
+            disabled={blocked || currentState === "on"}
             onClick={() => {
               control.send(true);
             }}
@@ -57,7 +64,7 @@ const PrecondControl = () => {
           </button>
           <button
             type="button"
-            disabled={control.isSending}
+            disabled={blocked || currentState === "off"}
             onClick={() => {
               control.send(false);
             }}
@@ -66,6 +73,13 @@ const PrecondControl = () => {
             Turn off
           </button>
         </div>
+
+        {lowBattery && (
+          <p className="text-center text-sm text-amber-400">
+            Battery is {battery}%. Preconditioning needs at least{" "}
+            {MIN_PRECONDITION_PERCENT}% — the car blocks it below that.
+          </p>
+        )}
 
         <p role="status" className="min-h-6 text-center text-sm">
           {control.isSending && (
@@ -95,7 +109,7 @@ const PrecondControl = () => {
         </p>
       </section>
 
-      <footer className="pt-6 text-center text-xs text-gray-500">
+      <footer className="pt-2 text-center text-xs text-gray-500">
         v{__APP_VERSION__}
       </footer>
     </main>

@@ -27,16 +27,39 @@ type PreconditionResult = {
   on: boolean;
 };
 
-// GET /api/car/status: the car's live preconditioning state, read back from the
-// car so the app can confirm a command actually took effect.
-// "unknown" when the car hasn't reported a state psacc understands.
+// The car's preconditioning state, read back so the app can confirm a command
+// took effect. "unknown" when the car hasn't reported a state psacc understands.
 type PreconditionState = "on" | "off" | "unknown";
 
-type PreconditionStatus = {
-  state: PreconditionState;
-  // The raw status string from the car (e.g. "Enabled"), for display/debugging.
-  raw: string | null;
-  // When the car last reported this, as psacc gives it.
+// The charge port / charging situation.
+type ChargingInfo = {
+  plugged: boolean;
+  // True only while actively charging (not merely plugged in).
+  charging: boolean;
+  // Raw psacc status, e.g. "Disconnected" / "InProgress", for display.
+  status: string | null;
+};
+
+// Where the car last reported being.
+type CarLocation = {
+  lat: number;
+  lon: number;
+};
+
+// GET /api/car/status: a snapshot of the car, read from psacc's get_vehicleinfo.
+// Every field is nullable because the car API leaves fields empty when it has
+// nothing fresh to report.
+type CarStatus = {
+  precondition: PreconditionState;
+  // The raw preconditioning status string (e.g. "Enabled"), for display/debug.
+  preconditionRaw: string | null;
+  batteryPercent: number | null;
+  rangeKm: number | null;
+  charging: ChargingInfo;
+  outsideTempC: number | null;
+  odometerKm: number | null;
+  location: CarLocation | null;
+  // When the car last reported this snapshot, as psacc gives it.
   updatedAt: string | null;
 };
 
@@ -47,5 +70,7 @@ export type {
   PreconditionBody,
   PreconditionResult,
   PreconditionState,
-  PreconditionStatus,
+  ChargingInfo,
+  CarLocation,
+  CarStatus,
 };

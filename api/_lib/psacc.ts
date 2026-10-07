@@ -1,4 +1,4 @@
-import type { PreconditionStatus } from "../../src/types/Api";
+import type { CarStatus, PreconditionState } from "../../src/types/Api";
 import { AppError, carUnavailable } from "./appError";
 
 // Client for the psa_car_controller (psacc) instance that actually talks to
@@ -74,37 +74,67 @@ const asRecord = (value: unknown): Record<string, unknown> | null =>
     ? (value as Record<string, unknown>)
     : null;
 
-// Reads the car's preconditioning state out of psacc's vehicle info. The field
-// is spelled "preconditionning" by the car API, and its status is a free-form
-// string ("Enabled", "Disabled", "Finished", "Failed", ...), so map defensively
-// and keep the raw value.
-const readStatus = (info: unknown): PreconditionStatus => {
-  const ac = asRecord(
-    asRecord(asRecord(info)?.preconditionning)?.air_conditioning,
-  );
-  const raw = typeof ac?.status === "string" ? ac.status : null;
-  const updatedAt = typeof ac?.updated_at === "string" ? ac.updated_at : null;
+const asNumber = (value: unknown): number | null =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const asString = (value: unknown): string | null =>
+  typeof value === "string" ? value : null;
+
+// The preconditioning status is a free-form string from the car ("Enabled",
+// "Disabled", "Finished", "Failed", ...), so map defensively.
+const toPreconditionState = (raw: string | null): PreconditionState => {
   const lower = raw?.toLowerCase() ?? "";
-  const state: PreconditionStatus["state"] =
-    raw === null
-      ? "unknown"
-      : lower.startsWith("enabl")
-        ? "on"
-        : lower === "disabled" || lower === "finished"
-          ? "off"
-          : "unknown";
-  return { state, raw, updatedAt };
+  if (raw === null) return "unknown";
+  if (lower.startsWith("enabl")) return "on";
+  if (lower === "disabled" || lower === "finished") return "off";
+  return "unknown";
 };
 
-// The car's current preconditioning state. We deliberately do NOT use psacc's
-// from_cache copy: that cache can lag the car by hours, so a command would
-// never appear to confirm. A plain get_vehicleinfo returns psacc's latest known
-// state (refreshed from the car's reports) and is fast — it reads server state,
-// it does not wake the car.
-const getPreconditionStatus = async (): Promise<PreconditionStatus> => {
+// Reads a car snapshot out of psacc's get_vehicleinfo. Every field is optional
+// in the car API, so each is parsed defensively and falls back to null.
+const readStatus = (info: unknown): CarStatus => {
+  const root = asRecord(info);
+
+  // "preconditionning" is the car API's spelling.
+  const ac = asRecord(asRecord(root?.preconditionning)?.air_conditioning);
+  const preconditionRaw = asString(ac?.status);
+
+  // energy is an array; the electric entry carries battery and charging.
+  const energyList = Array.isArray(root?.energy) ? root.energy : [];
+  const energy = asRecord(energyList[0]);
+  const charging = asRecord(energy?.charging);
+  const chargeStatus = asString(charging?.status);
+
+  const coords = asRecord(asRecord(root?.last_position)?.geometry)?.coordinates;
+  const lon = Array.isArray(coords) ? asNumber(coords[0]) : null;
+  const lat = Array.isArray(coords) ? asNumber(coords[1]) : null;
+
+  return {
+    precondition: toPreconditionState(preconditionRaw),
+    preconditionRaw,
+    batteryPercent: asNumber(energy?.level),
+    rangeKm: asNumber(energy?.autonomy),
+    charging: {
+      plugged: charging?.plugged === true,
+      charging: chargeStatus === "InProgress",
+      status: chargeStatus,
+    },
+    outsideTempC: asNumber(asRecord(asRecord(root?.environment)?.air)?.temp),
+    odometerKm: asNumber(asRecord(root?.timed_odometer)?.mileage),
+    location: lat !== null && lon !== null ? { lat, lon } : null,
+    updatedAt: asString(energy?.updated_at) ?? asString(ac?.updated_at),
+  };
+};
+
+// The car's current snapshot. We deliberately do NOT use psacc's from_cache
+// copy: that cache can lag the car by hours, so a command would never appear to
+// confirm. A plain get_vehicleinfo returns psacc's latest known state
+// (refreshed from the car's reports) and is fast — it reads server state, it
+// does not wake the car.
+const getCarStatus = async (): Promise<CarStatus> => {
   const vin = await vehicleVin();
   const info = await psaccGet(`/get_vehicleinfo/${encodeURIComponent(vin)}`);
   return readStatus(info);
 };
 
-export { setPreconditioning, getPreconditionStatus };
+export { setPreconditioning, getCarStatus };
