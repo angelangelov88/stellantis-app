@@ -1,4 +1,5 @@
 import precondition from "../_handlers/car/precondition";
+import schedules from "../_handlers/car/schedules";
 import status from "../_handlers/car/status";
 import { createRouter } from "../_lib/router";
 
@@ -6,4 +7,4 @@ import { createRouter } from "../_lib/router";
 export const config = { maxDuration: 60 };
 
 // /api/car/<action>. The code is in api/_handlers/car/.
-export default createRouter({ precondition, status });
+export default createRouter({ precondition, schedules, status });

@@ -1,5 +1,10 @@
 import type { z } from "zod";
-import type { loginSchema, precondSchema } from "../lib/apiSchemas";
+import type {
+  loginSchema,
+  precondSchema,
+  precondProgramSchema,
+  precondProgramsSchema,
+} from "../lib/apiSchemas";
 
 // Shared by the api/ functions and the app.
 
@@ -19,6 +24,12 @@ type LoginBody = z.infer<typeof loginSchema>;
 
 // POST /api/car/precondition. Turn preconditioning on or off.
 type PreconditionBody = z.infer<typeof precondSchema>;
+
+// One weekly preconditioning schedule, in the car's wire shape.
+type PrecondProgram = z.infer<typeof precondProgramSchema>;
+
+// GET/PUT /api/car/schedules: all four schedules, in the car's wire shape.
+type PrecondPrograms = z.infer<typeof precondProgramsSchema>;
 
 // The command is fire-and-forget: psacc publishes it to the car and returns at
 // once, so "sent" means dispatched, not confirmed by the car.
@@ -68,6 +79,8 @@ export type {
   Me,
   LoginBody,
   PreconditionBody,
+  PrecondProgram,
+  PrecondPrograms,
   PreconditionResult,
   PreconditionState,
   ChargingInfo,

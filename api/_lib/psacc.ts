@@ -1,4 +1,9 @@
-import type { CarStatus, PreconditionState } from "../../src/types/Api";
+import type {
+  CarStatus,
+  PreconditionState,
+  PrecondPrograms,
+} from "../../src/types/Api";
+import { precondProgramsSchema } from "../../src/lib/apiSchemas";
 import { AppError, carUnavailable } from "./appError";
 
 // Client for the psa_car_controller (psacc) instance that actually talks to
@@ -43,6 +48,26 @@ const psaccGet = async (path: string): Promise<unknown> => {
   }
 };
 
+const psaccPost = async (path: string, body: unknown): Promise<unknown> => {
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl()}${path}`, {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch {
+    throw carUnavailable();
+  }
+  if (!res.ok) throw carUnavailable();
+  try {
+    return (await res.json()) as unknown;
+  } catch {
+    throw carUnavailable();
+  }
+};
+
 // The VIN of the car to control: the VEHICLE_VIN override, else the first car
 // psacc knows about. Cached for the life of the instance.
 let cachedVin: string | null = null;
@@ -57,6 +82,14 @@ const vehicleVin = async () => {
     throw new AppError(502, "no_vehicle", "No car found in the car service");
   cachedVin = vin;
   return vin;
+};
+
+// Wakes the car so it comes online and reports a fresh state (battery, charge,
+// schedules) over MQTT. No preconditioning is started and nothing is changed on
+// the car — it just prompts a report. psacc rate-limits this on its own side.
+const wakeUpCar = async () => {
+  const vin = await vehicleVin();
+  await psaccGet(`/wakeup/${encodeURIComponent(vin)}`);
 };
 
 // Turns preconditioning on or off. psacc publishes the command to the car and
@@ -137,4 +170,33 @@ const getCarStatus = async (): Promise<CarStatus> => {
   return readStatus(info);
 };
 
-export { setPreconditioning, getCarStatus };
+// The four weekly preconditioning schedules as psacc knows them. psacc only
+// learns these from the car's MQTT reports, so this can be empty/default until
+// the car has reported — validated into our wire shape, carUnavailable if not.
+const getPreconditionPrograms = async (): Promise<PrecondPrograms> => {
+  const vin = await vehicleVin();
+  const data = await psaccGet(
+    `/preconditioning_program/${encodeURIComponent(vin)}`,
+  );
+  const parsed = precondProgramsSchema.safeParse(data);
+  if (!parsed.success) throw carUnavailable();
+  return parsed.data;
+};
+
+// Writes the four schedules back to the car via psacc. The caller validates the
+// body; psacc pushes it to the car over MQTT and returns at once.
+const setPreconditionPrograms = async (programs: PrecondPrograms) => {
+  const vin = await vehicleVin();
+  await psaccPost(
+    `/preconditioning_program/${encodeURIComponent(vin)}`,
+    programs,
+  );
+};
+
+export {
+  wakeUpCar,
+  setPreconditioning,
+  getCarStatus,
+  getPreconditionPrograms,
+  setPreconditionPrograms,
+};

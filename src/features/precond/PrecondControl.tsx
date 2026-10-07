@@ -1,6 +1,7 @@
 import classNames from "classnames";
 import { useLogout } from "../auth/useAuth";
 import CarStatusPanel from "./CarStatusPanel";
+import SchedulePanel from "./SchedulePanel";
 import { usePreconditionControl } from "./usePreconditionControl";
 
 const STATE_LABEL = { on: "On", off: "Off", unknown: "Unknown" } as const;
@@ -17,6 +18,11 @@ const PrecondControl = () => {
   // Block while sending, on low battery, and during the first status load —
   // we won't fire a command before we know the car's state and charge.
   const blocked = control.isSending || lowBattery || control.isStatusLoading;
+
+  // While a command is in flight, show the state we asked for; otherwise follow
+  // what the car reports.
+  const pending = control.isSending || control.confirming;
+  const shownOn = pending ? (control.target ?? false) : currentState === "on";
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col gap-5 px-4 py-6">
@@ -38,7 +44,7 @@ const PrecondControl = () => {
         loading={control.isStatusLoading}
       />
 
-      <section className="flex flex-1 flex-col justify-center gap-4">
+      <section className="flex flex-col gap-4">
         <h2 className="text-center text-sm font-medium uppercase tracking-wide text-gray-400">
           Preconditioning
         </h2>
@@ -60,27 +66,44 @@ const PrecondControl = () => {
           )}
         </p>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex items-center justify-center gap-4">
+          <span
+            className={classNames("text-sm font-medium", {
+              "text-gray-500": shownOn,
+              "text-strong": !shownOn,
+            })}
+          >
+            Off
+          </span>
           <button
             type="button"
-            disabled={blocked || currentState === "on"}
+            role="switch"
+            aria-checked={shownOn}
+            aria-label="Preconditioning"
+            disabled={blocked}
             onClick={() => {
-              control.send(true);
+              control.send(!shownOn);
             }}
-            className="rounded-2xl bg-emerald-400 px-4 py-6 text-lg font-semibold text-gray-950 transition disabled:opacity-40"
+            className={classNames(
+              "relative inline-flex h-10 w-[4.5rem] shrink-0 items-center rounded-full transition disabled:opacity-40",
+              shownOn ? "bg-emerald-400" : "bg-gray-700",
+            )}
           >
-            Turn on
+            <span
+              className={classNames(
+                "inline-block h-8 w-8 transform rounded-full bg-white shadow transition",
+                shownOn ? "translate-x-9" : "translate-x-1",
+              )}
+            />
           </button>
-          <button
-            type="button"
-            disabled={blocked || currentState === "off"}
-            onClick={() => {
-              control.send(false);
-            }}
-            className="rounded-2xl bg-gray-800 px-4 py-6 text-lg font-semibold text-strong transition disabled:opacity-40"
+          <span
+            className={classNames("text-sm font-medium", {
+              "text-emerald-400": shownOn,
+              "text-gray-500": !shownOn,
+            })}
           >
-            Turn off
-          </button>
+            On
+          </span>
         </div>
 
         {lowBattery && (
@@ -118,7 +141,9 @@ const PrecondControl = () => {
         </p>
       </section>
 
-      <footer className="pt-2 text-center text-xs text-gray-500">
+      <SchedulePanel disabled={control.isSending} />
+
+      <footer className="mt-auto pt-2 text-center text-xs text-gray-500">
         v{__APP_VERSION__}
       </footer>
     </main>
