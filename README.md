@@ -120,9 +120,45 @@ pnpm run test
 pnpm run build
 ```
 
-Preconditioning is fire-and-forget: psacc publishes the MQTT command and returns
-at once, so a success means "request sent", not "the car confirmed". It can take
-a moment to reach the car.
+## How commands reach the car (and the sleep cycle)
+
+Every command is fire-and-forget: psacc publishes the MQTT request and returns at
+once, so a 2xx means "request sent", not "the car did it". What happens next
+depends on whether the car is awake.
+
+The car's telematics unit **sleeps** to spare the 12V battery, and a sleeping car
+does not apply commands immediately. The Stellantis backend accepts the command
+(`900 accepted`) but reports the vehicle asleep (`901`), then **delivers it when
+the car next wakes** — on its own periodic check-in, or when you drive, lock or
+unlock it. In testing this delay ran from seconds to tens of minutes. So treat
+commands as **eventually consistent**, not instant.
+
+This lands differently on the two features:
+
+- **Preconditioning on/off** (the main screen) is time-critical, and the
+  `activate` command tends to wake the car as a side effect — and you'd normally
+  precondition while plugged in anyway. The UI reflects the uncertainty: it goes
+  _Sending → Confirming with the car → Confirmed ✓_, or _Sent, but the car hasn't
+  confirmed yet_ if the car stays unreachable. A command isn't claimed as done
+  until the car reports the matching state.
+- **Schedule edits** are not time-critical, so the UI says **"Sent — applies next
+  time the car is awake"** rather than "Saved". We deliberately don't show a
+  schedule as _applied/confirmed_: psacc stores the requested values the moment it
+  accepts them, so there's no reliable signal that the **car** has taken them.
+  Note the consequence — if you change a schedule and the car doesn't sync before
+  that schedule's next trigger, the car runs the _old_ schedule that one time.
+
+**"Refresh" / wake is a read, not a wake.** psacc's `wakeup` is really a
+charge-state request; an awake car answers with fresh data, but a sleeping car
+**cannot be forced awake** by it and keeps showing its last report. A reliable
+wake needs a real action (drive/unlock) or the car being on charge.
+
+Known gaps, if you want to harden this later: we haven't verified how long the
+backend holds an undelivered command (so there's no "resend if stale" yet), and
+true schedule confirmation would need a psacc-side change to distinguish
+_requested_ from _reported-by-car_. There is also an **unconfirmed** report that
+enabling a schedule's on-flag can land on the next schedule — under investigation,
+not yet reproduced cleanly.
 
 [psacc]: https://github.com/flobz/psa_car_controller
 [caddy]: https://caddyserver.com/
