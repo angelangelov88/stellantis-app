@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { request } from "../../lib/apiClient";
+import useToast from "../../contexts/useToast";
 import { SCHEDULES_KEY } from "./useSchedules";
 import { STATUS_KEY } from "./useCarStatus";
 
@@ -13,6 +14,7 @@ const SETTLE_MS = 20_000;
 // moment to report, so both pick up the fresh snapshot.
 const useWake = () => {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: STATUS_KEY });
     void queryClient.invalidateQueries({ queryKey: SCHEDULES_KEY });
@@ -23,6 +25,9 @@ const useWake = () => {
     onSuccess: () => {
       refresh();
       setTimeout(refresh, SETTLE_MS);
+    },
+    onError: (error) => {
+      showToast(error.message, "error");
     },
   });
 };
