@@ -66,6 +66,10 @@ const SchedulePanel = ({ disabled }: SchedulePanelProps) => {
       <h2 className="text-sm font-medium uppercase tracking-wide text-gray-400">
         Schedules
       </h2>
+      <p className="text-xs text-gray-500">
+        Changes apply the next time the car is awake — usually within a few
+        hours, or when you next drive. Not always straight away.
+      </p>
 
       {draft.map((schedule, index) => (
         <ScheduleRow
@@ -84,7 +88,9 @@ const SchedulePanel = ({ disabled }: SchedulePanelProps) => {
             <span className="text-red-400">{save.error.message}</span>
           )}
           {save.isSuccess && !dirty && (
-            <span className="text-emerald-400">Saved ✓</span>
+            <span className="text-gray-300">
+              Sent — it&apos;ll apply when the car next wakes.
+            </span>
           )}
         </p>
         <button

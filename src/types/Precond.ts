@@ -5,9 +5,10 @@ type CarStatusPanelProps = {
   status: CarStatus | null;
   // True on the first fetch, before any snapshot has arrived.
   loading: boolean;
-  // Wakes the car and refreshes the snapshot.
+  // Pulls the car's latest report. It asks the car for fresh data but can't
+  // force a sleeping car awake, so a snapshot may stay as the last report.
   onRefresh: () => void;
-  // True while a wake/refresh is in flight.
+  // True while a refresh is in flight.
   refreshing: boolean;
 };
 

@@ -102,9 +102,10 @@ const CarStatusPanel = ({
             type="button"
             onClick={onRefresh}
             disabled={refreshing}
+            title="Pulls the car's latest report. A sleeping car can't be forced awake, so this may keep showing the last report until the car next wakes."
             className="underline underline-offset-4 disabled:opacity-40"
           >
-            {refreshing ? "Waking…" : "Refresh"}
+            {refreshing ? "Refreshing…" : "Refresh"}
           </button>
         </div>
       </div>

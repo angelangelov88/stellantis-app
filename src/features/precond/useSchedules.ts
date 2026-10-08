@@ -27,7 +27,10 @@ const useSaveSchedules = () => {
       }),
     onSuccess: (data) => {
       queryClient.setQueryData(SCHEDULES_KEY, data);
-      showToast("Schedules saved", "success");
+      // "Saved" would overclaim. psacc has accepted the change and sent it on,
+      // but the car only applies a schedule write the next time it's awake, so
+      // say that rather than imply the car already has it.
+      showToast("Update sent — applies next time the car is awake", "info");
     },
     onError: (error) => {
       showToast(error.message, "error");
